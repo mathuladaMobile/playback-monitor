@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-main>
-      <HelloWorld />
+      <Monitor />
       <v-btn
         class="m-2"
         icon="mdi-theme-light-dark"
@@ -13,6 +13,6 @@
   </v-app>
 </template>
 
-<script lang="ts" setup>
-  import HelloWorld from '@/components/HelloWorld.vue'
+<script setup>
+import Monitor from "@/components/Monitor.vue";
 </script>
