@@ -58,6 +58,18 @@ export default defineConfig({
         target: 'https://superhero.mobileinnovation.asia',
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          // Remove headers that block framing when running the dev server.
+          proxy.on('proxyRes', (proxyRes) => {
+            try {
+              delete proxyRes.headers['x-frame-options'];
+              delete proxyRes.headers['content-security-policy'];
+              delete proxyRes.headers['x-content-type-options'];
+            } catch (e) {
+              // ignore
+            }
+          });
+        },
         rewrite: (path) => path.replace(/^\/vss/, '/vss'),
       },
     },

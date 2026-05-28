@@ -23,6 +23,19 @@
     </div>
   </section>
 
+  <section class="input-video-url">
+    <v-text-field
+      v-model="newVideoUrl"
+      placeholder="Paste video URL"
+      dense
+      hide-details
+      variant="outlined"
+      class="video-url-input"
+    />
+    <v-btn variant="tonal" @click="loadVideoUrl">Load</v-btn>
+    <v-btn variant="outlined" @click="openInNewTab">Open</v-btn>
+  </section>
+
   <div class="monitor-page" :class="{ 'single-view': showMode !== 'all' }">
     <!--------------------------->
     <!-- Monitor Real Time Section -->
@@ -157,8 +170,11 @@ import { ref, computed, onMounted } from "vue";
 import DateTimeComponent from "./input/DateTimeComponent.vue";
 import { queryGtOfDevice } from "@/stores/api.ts";
 
-const videoSrc = ref(
+const rawVideoUrl = ref(
   "https://superhero.mobileinnovation.asia/vss/apiPage/RealVideo.html?token=deb4cc288714456aa510c3cef0f6b193&deviceId=31086000100&chs=1&stream=0&wnum=1&panel=1&buffer=2000",
+);
+const videoSrc = ref(
+  "/vss/apiPage/RealVideo.html?token=deb4cc288714456aa510c3cef0f6b193&deviceId=31086000100&chs=1&stream=0&wnum=1&panel=1&buffer=2000",
 );
 
 const monitorData = ref({
@@ -198,7 +214,23 @@ const playbackBtns = [
   "Turn off sound",
 ];
 
-const showMode = ref("");
+const showMode = ref("all");
+const newVideoUrl = ref(rawVideoUrl.value);
+
+const loadVideoUrl = () => {
+  if (!newVideoUrl.value) return;
+  rawVideoUrl.value = newVideoUrl.value;
+  videoSrc.value = decodeVideoUrl(newVideoUrl.value);
+};
+
+const openInNewTab = () => {
+  const url = newVideoUrl.value || rawVideoUrl.value || videoSrc.value;
+  try {
+    window.open(url, "_blank");
+  } catch (e) {
+    console.warn("Unable to open new tab", e);
+  }
+};
 
 const realtimeDetailItems = computed(() => [
   // { label: "Ip", value: monitorData.value.ip, input: "text" },
@@ -282,6 +314,10 @@ const decodeVideoUrl = (url) => {
       monitorData.value.chs = params.chs;
     }
 
+    if (parsedUrl.origin === "https://superhero.mobileinnovation.asia") {
+      return parsedUrl.pathname + parsedUrl.search;
+    }
+
     return url;
   } catch (e) {
     console.error("Error decoding URL:", e);
@@ -310,7 +346,7 @@ const handleBtnClick = (btn) => {
 };
 
 onMounted(() => {
-  decodeVideoUrl(videoSrc.value);
+  videoSrc.value = decodeVideoUrl(rawVideoUrl.value);
   getDeviceInfo(monitorData.value.deviceID);
 });
 </script>
@@ -324,6 +360,7 @@ onMounted(() => {
   margin: 0 auto;
   font-family: Arial, sans-serif;
   color: #222;
+  align-items: stretch;
 }
 
 .monitor-live {
@@ -343,6 +380,7 @@ onMounted(() => {
   border-radius: 12px;
   background: #f5f7fa;
   border: 1px solid #e1e5eb;
+  margin-bottom: 12px;
 }
 
 .view-switch-label {
@@ -355,6 +393,19 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.video-url-input {
+  min-width: 320px;
+  max-width: 520px;
+}
+
+@media (max-width: 720px) {
+  .video-url-input {
+    min-width: 160px;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
 }
 
 .monitor-page.single-view {
@@ -380,6 +431,13 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   border: 0;
+}
+
+/* When showing panels side-by-side, use a fixed min-height instead of aspect padding
+   so both panels visually align and expand to available space. */
+.monitor-page:not(.single-view) .video-wrapper {
+  padding-top: 0;
+  min-height: 360px;
 }
 
 .details-grid {
@@ -455,5 +513,12 @@ onMounted(() => {
   .button-group > div {
     flex: 1 1 100%;
   }
+}
+
+.input-video-url {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px;
 }
 </style>

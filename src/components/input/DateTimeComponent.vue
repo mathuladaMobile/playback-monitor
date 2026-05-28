@@ -88,10 +88,6 @@ const updateTime = (value) => {
   gap: 0.5rem;
 }
 
-.date-time-inputs {
-  display: flex;
-  gap: 0.5rem;
-}
 
 .date-time-label {
   font-size: 0.95rem;
@@ -104,5 +100,16 @@ const updateTime = (value) => {
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+  .date-time-inputs {
+    flex-direction: column;
+  }
+
+  .date-input,
+  .time-input {
+    width: 100%;
+  }
 }
 </style>
