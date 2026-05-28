@@ -52,5 +52,14 @@ export default defineConfig({
   },
   server: {
     port: 1010,
+    proxy: {
+      // Proxy /vss requests to the remote API to avoid CORS in dev
+      '/vss': {
+        target: 'https://superhero.mobileinnovation.asia',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/vss/, '/vss'),
+      },
+    },
   },
 })

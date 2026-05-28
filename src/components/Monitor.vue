@@ -1,12 +1,12 @@
 <template>
   <section class="view-switch">
-    <span class="view-switch-label">Show Mode:</span>
+    <span class="view-switch-label">Show Mode: {{ showMode }}</span>
     <div class="view-switch-buttons">
       <v-btn
-        :variant="showMode === 'both' ? 'tonal' : 'outlined'"
-        @click="showMode = 'both'"
+        :variant="showMode === 'all' ? 'tonal' : 'outlined'"
+        @click="showMode = 'all'"
       >
-        Both
+        All
       </v-btn>
       <v-btn
         :variant="showMode === 'real-time' ? 'tonal' : 'outlined'"
@@ -22,8 +22,8 @@
       </v-btn>
     </div>
   </section>
-  
-  <div class="monitor-page" :class="{ 'single-view': showMode !== 'both' }">
+
+  <div class="monitor-page" :class="{ 'single-view': showMode !== 'all' }">
     <!--------------------------->
     <!-- Monitor Real Time Section -->
     <!--------------------------->
@@ -140,7 +140,6 @@
           <DateTimeComponent
             v-else-if="item.input === 'datetime'"
             v-model="item.value"
-            :label="item.label"
           />
         </div>
       </div>
@@ -154,8 +153,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import DateTimeComponent from "./input/DateTimeComponent.vue";
+import { queryGtOfDevice } from "@/stores/api.ts";
 
 const videoSrc = ref(
   "https://superhero.mobileinnovation.asia/vss/apiPage/RealVideo.html?token=deb4cc288714456aa510c3cef0f6b193&deviceId=31086000100&chs=1&stream=0&wnum=1&panel=1&buffer=2000",
@@ -198,11 +198,11 @@ const playbackBtns = [
   "Turn off sound",
 ];
 
-const showMode = ref("both");
+const showMode = ref("");
 
 const realtimeDetailItems = computed(() => [
-  { label: "Ip", value: monitorData.value.ip, input: "text" },
-  { label: "Prot", value: monitorData.value.prot, input: "text" },
+  // { label: "Ip", value: monitorData.value.ip, input: "text" },
+  // { label: "Prot", value: monitorData.value.prot, input: "text" },
   { label: "deviceID", value: monitorData.value.deviceID, input: "text" },
   { label: "channel", value: monitorData.value.channel, input: "text" },
   { label: "stream ", value: monitorData.value.stream, input: "select" },
@@ -219,6 +219,11 @@ const realtimeDetailItems = computed(() => [
   {
     label: "Current username",
     value: monitorData.value.currentUsername,
+    input: "text",
+  },
+  {
+    label: "chs",
+    value: monitorData.value.chs,
     input: "text",
   },
 ]);
@@ -242,16 +247,72 @@ const playbackDetailItems = computed(() => [
   },
 ]);
 
-const handleBtnClick = (btn) => {
-  console.log(`Button clicked: ${btn}`);
-  if (btn === "Live") {
-    videoSrc.value =
-      "https://superhero.mobileinnovation.asia/vss/apiPage/RealVideo.html?token=deb4cc288714456aa510c3cef0f6b193&deviceId=31086000100&chs=1&stream=0&wnum=1&panel=1&buffer=2000";
-  } else if (btn === "Playback") {
-    videoSrc.value =
-      "https://superhero.mobileinnovation.asia/vss/apiPage/PlaybackVideo.html?token=deb4cc288714456aa510c3cef0f6b193&deviceId=31086000100&chs=1&stream=0&wnum=1&panel=1&buffer=2000";
+const videoUrlParams = ref({});
+
+const decodeVideoUrl = (url) => {
+  try {
+    const parsedUrl = new URL(url);
+    const params = {};
+    parsedUrl.searchParams.forEach((value, key) => {
+      params[key] = /^[0-9]+$/.test(value) ? Number(value) : value;
+    });
+
+    videoUrlParams.value = params;
+
+    console.log("Decoded URL parameters:", params);
+
+    if (params.deviceId) {
+      monitorData.value.deviceID = params.deviceId;
+    }
+    if (params.stream !== undefined) {
+      if (params.stream !== 0 && params.stream !== 1) {
+        console.warn(
+          `Unexpected stream value: ${params.stream}. Expected 0 or 1.`,
+        );
+      }
+      if (params.stream === 0) {
+        showMode.value = "playback";
+      }
+      monitorData.value.stream = params.stream;
+    }
+    if (params.wnum !== undefined) {
+      monitorData.value.channel = params.wnum;
+    }
+    if (params.chs !== undefined) {
+      monitorData.value.chs = params.chs;
+    }
+
+    return url;
+  } catch (e) {
+    console.error("Error decoding URL:", e);
+    return url; // Return original URL if decoding fails
   }
 };
+
+const getDeviceInfo = async (deviceId) => {
+  console.log(`Fetching device info for deviceId: ${deviceId}`);
+  try {
+    const response = await queryGtOfDevice(deviceId);
+    console.log("Device info response:", response);
+    if (response && response.data) {
+      const data = response.data;
+      monitorData.value.deviceID = data.deviceId || monitorData.value.deviceID;
+      monitorData.value.ip = data.ip || monitorData.value.ip;
+      monitorData.value.prot = data.protocol || monitorData.value.prot;
+    }
+  } catch (error) {
+    console.error("Error fetching device info:", error);
+  }
+};
+
+const handleBtnClick = (btn) => {
+  console.log(`Button clicked: ${btn}`);
+};
+
+onMounted(() => {
+  decodeVideoUrl(videoSrc.value);
+  getDeviceInfo(monitorData.value.deviceID);
+});
 </script>
 
 <style scoped>
@@ -260,7 +321,6 @@ const handleBtnClick = (btn) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   padding: 24px;
-  max-width: 1200px;
   margin: 0 auto;
   font-family: Arial, sans-serif;
   color: #222;

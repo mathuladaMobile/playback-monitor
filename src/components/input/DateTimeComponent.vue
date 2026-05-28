@@ -3,7 +3,8 @@
     <label v-if="label" class="date-time-label">{{ label }}</label>
     <div class="date-time-inputs">
       <input
-        type="date"
+        type="text"
+        placeholder="dd/mm/yyyy"
         :value="dateValue"
         @input="updateDate($event.target.value)"
         class="date-input"
@@ -20,6 +21,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import dayjs from 'dayjs'
 
 const props = defineProps({
   modelValue: {
@@ -35,15 +37,18 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const formatDateTime = (value) => {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
+  if (!value) {
     return { date: '', time: '' }
   }
 
-  const pad = (num) => String(num).padStart(2, '0')
+  const parsed = dayjs(value)
+  if (!parsed.isValid()) {
+    return { date: '', time: '' }
+  }
+
   return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`
+    date: parsed.format('DD MMM YYYY'),
+    time: parsed.format('HH:mm')
   }
 }
 
@@ -58,7 +63,13 @@ const emitValue = (datePart, timePart) => {
     return
   }
 
-  emit('update:modelValue', `${datePart}T${timePart}:00`)
+  const [day, month, year] = datePart.split('/')
+  if (!day || !month || !year) {
+    emit('update:modelValue', '')
+    return
+  }
+
+  emit('update:modelValue', `${year}-${month}-${day}T${timePart}:00`)
 }
 
 const updateDate = (value) => {
